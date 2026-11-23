@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TT Analyzer</title>
+<meta name="description" content="Drop in a table tennis match: dead time is cut out, every stroke is tagged and broken down, and you can compare your technique. Runs in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <a class="logo" href="./" style="color:inherit;text-decoration:none"><span class="logo-mark" aria-hidden="true"></span><h1>TT <span>Analyzer</span></h1></a>
+    <span class="chip" id="fileChip" hidden></span>
+    <span class="spacer"></span>
+    <span class="chip">Runs in your browser · <b>nothing is uploaded</b></span>
+  </header>
+
+  <!-- LANDING -->
+  <section id="landing" class="landing">
+    <div>
+      <h2>Your match,<br><em>minus the dead time.</em></h2>
+      <p class="lede">Drop in a video of your table tennis match. TT Analyzer cuts it down to the rallies, tags every
+        stroke, breaks it into backswing, contact and follow-through, and lets you compare your technique side by side.</p>
+      <ul class="points">
+        <li><i>1</i><span><b>Rallies only.</b> It listens for the ball, so every clip starts a second before the serve and stops when the point is over.</span></li>
+        <li><i>2</i><span><b>Every stroke tagged.</b> Serves, pushes, forehand and backhand loops, blocks, with the angles at each phase.</span></li>
+        <li><i>3</i><span><b>Private.</b> Your video stays on your computer; all the analysis happens in this tab.</span></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <label class="drop" id="drop" for="fileInput">
+        <span class="ball" aria-hidden="true"></span>
+        <b>Drop your match video</b>
+        <small>or click to choose a file · MP4 or MOV from a phone works best</small>
+        <input id="fileInput" type="file" accept="video/*" hidden>
+      </label>
+      <div class="or">or</div>
+      <button class="btn" id="sampleBtn" style="height:44px">▶ Try it on the sample match</button>
+      <p class="fine">Best results: film from behind one end or from the side with the whole table in view, keep the
+        sound on, and be the player nearest the camera. Works in Chrome, Edge and Safari on a computer. Videos up to
+        about 1&nbsp;GB work smoothly; for longer matches, record at 720p.</p>
+    </div>
+  </section>
+
+  <!-- PROCESSING -->
+  <section id="processing" class="card progress-card" hidden>
+    <div class="eyebrow" id="procFile">Analysing</div>
+    <h2 style="font-size:32px;text-transform:uppercase" id="procTitle">Working on your match</h2>
+    <ol class="steps" id="steps">
+      <li data-s="audio"><i>1</i><span>Listening to the match for ball contacts</span><small></small></li>
+      <li data-s="rallies"><i>2</i><span>Finding the rallies and cutting the dead time</span><small></small></li>
+      <li data-s="pose"><i>3</i><span>Watching your strokes</span><small></small></li>
+    </ol>
+    <div class="meter"><i id="meter"></i></div>
+    <p class="fine" id="procNote">Keep this tab open. Stroke analysis plays through each rally, so it takes about as long as the rallies themselves.</p>
+    <div id="procErr" class="err" hidden></div>
+  </section>
+
+  <!-- MATCH VIEW -->
+  <section id="matchView" class="stack" style="gap:26px" hidden>
+    <div class="hero">
+      <div>
+        <div class="screen">
+          <video id="vid" playsinline preload="auto"></video>
+          <canvas id="cv"></canvas>
+          <div class="corner"><span class="live" id="modeTag">● Rallies only</span><span id="rallyTag" hidden></span></div>
+          <div class="lower-third" id="lt"><div class="lt-a" id="ltA">Contact</div><div class="lt-b"><b id="ltB"></b><span id="ltC"></span></div></div>
+        </div>
+        <div class="deck">
+          <div class="lane on" id="laneR"><span>Rallies only</span><div class="track" id="trackR"></div></div>
+          <div class="lane" id="laneF"><span>Full match</span><div class="track" id="trackF"></div></div>
+          <div class="controls">
+            <button class="btn" id="kPrev" title="Previous key moment (Shift+←)" aria-label="Previous key moment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 5v14M18 6l-8 6 8 6z"/></svg></button>
+            <button class="btn" id="fPrev" title="Back one frame (←)" aria-label="Back one frame"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <button class="btn primary" id="play" title="Play / pause (Space)" aria-label="Play"></button>
+            <button class="btn" id="fNext" title="Forward one frame (→)" aria-label="Forward one frame"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg></button>
+            <button class="btn" id="kNext" title="Next key moment (Shift+→)" aria-label="Next key moment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 5v14M6 6l8 6-8 6z"/></svg></button>
+            <span class="clock num" id="clock">0:00.0</span>
+            <span class="spacer"></span>
+            <div class="seg" id="speeds" role="group" aria-label="Playback speed"></div>
+            <div class="seg" role="group" aria-label="What to play"><button id="mR" class="on">Rallies only</button><button id="mF">Full match</button></div>
+            <button class="btn" id="loop" disabled title="Loop the selected stroke (L)">Loop stroke</button>
+            <button class="btn" id="lines" title="Draw the detected joints over the player (B)">Body lines</button>
+          </div>
+          <div class="hint">Space play · ←/→ one frame · Shift+←/→ jump between backswing, contact and follow-through · L loop · B body lines</div>
+        </div>
+      </div>
+      <aside class="card glance">
+        <h2>Match at a glance</h2>
+        <div class="stat"><span>Rallies found</span><b id="sRallies">–</b></div>
+        <div class="stat"><span>Your strokes tagged</span><b id="sStrokes">–</b></div>
+        <div class="stat"><span>Longest rally</span><b id="sLongest">–</b></div>
+        <div>
+          <div class="stat" style="border:0;padding-bottom:6px"><span>Dead time cut</span><b id="sCut">–</b></div>
+          <div class="cut" aria-hidden="true"><i id="cutBar" style="width:0"></i></div>
+          <p style="margin-top:6px" id="cutText"></p>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="exportVideo">Download rally-only video</button>
+          <button class="btn" id="exportJson">Save analysis</button>
+        </div>
+        <p id="exportNote" hidden></p>
+        <p>Each clip starts 1 second before the serve toss and ends when the point is over.</p>
+      </aside>
+    </div>
+
+    <div class="note" id="poseNote" hidden></div>
+
+    <section class="stack">
+      <div class="section-head"><h2>Rallies</h2><span class="hint">Click one to play it.</span></div>
+      <div class="strip" id="strip"></div>
+    </section>
+
+    <section class="stack">
+      <div class="section-head"><h2>Your strokes</h2><span class="hint" id="strokeHint">Pick a skill, then a stroke to see how you hit it.</span></div>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <div class="desk">
+        <div class="list" id="list"></div>
+        <div id="detail" class="empty">Pick a stroke on the left.</div>
+      </div>
+    </section>
+  </section>
+
+  <!-- COMPARE VIEW -->
+  <section id="compareView" class="stack" hidden style="gap:18px">
+    <div class="controls">
+      <button class="btn" id="back">← Back to the match</button>
+      <h2 id="cmpTitle" style="font-size:30px;text-transform:uppercase;letter-spacing:.04em">Compare</h2>
+    </div>
+    <div class="cmp-grid">
+      <aside class="card" style="display:grid;gap:10px">
+        <div class="eyebrow">Compare against</div>
+        <div class="refs" id="refs"></div>
+        <p class="fine">Save any stroke as a reference (a coach's, a friend's, or your best one) and compare against it later.</p>
+      </aside>
+      <div class="stack" style="gap:16px" id="cmpMain"></div>
+    </div>
+  </section>
+</div>
+<video id="poseVideo" muted playsinline preload="auto"></video>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

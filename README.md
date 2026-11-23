@@ -254,3 +254,15 @@ Settings are environment variables with the `TT_` prefix (see `.env.example`):
   tracking holds up with busy backgrounds.
 - **Smarter cutting.** Re-encode only the frames around each cut and stream-copy the rest, so clips are
   frame-accurate and lossless.
+
+## Website (no install)
+
+`web/` is the browser version: drop a video in and everything runs in the tab (the sound is analysed
+to find the rallies, MediaPipe runs in the browser for the strokes). Nothing is uploaded. It's published
+with GitHub Pages from the `gh-pages` branch:
+
+```bash
+git subtree push --prefix web origin gh-pages
+```
+
+`web/tools/build_sample.py` rebuilds the sample match and reference strokes in `web/sample/`.
