@@ -105,3 +105,12 @@ def test_camera_view_guess():
     assert camera_view(CORNERS) == "end"
     side_on = np.array([[80, 150], [560, 150], [600, 220], [40, 220]], np.float32)
     assert camera_view(side_on) == "side"
+
+
+def test_table_found_despite_blue_barriers():
+    # blue surround boards running off the frame edges must not be taken for the table
+    img = table_frame()
+    cv2.rectangle(img, (0, 20), (639, 70), (140, 70, 20), -1)
+    geo = TableDetector().detect([img])
+    assert geo is not None
+    assert np.abs(geo.corners - CORNERS).max() < 8

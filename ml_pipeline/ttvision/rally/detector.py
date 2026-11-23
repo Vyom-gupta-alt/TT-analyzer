@@ -177,8 +177,15 @@ class RallyDetector:
             return group
         # with court coordinates: the serve is the first hit after which the ball crosses the net
         if s.table is not None and ball_t.size:
+            fps = (len(s.frame_times) / s.duration) if s.duration and len(s.frame_times) else 30.0
             for i, t in enumerate(group[:-1]):
-                if _crosses_net(s.ball, ball_t, t, min(t + 1.2, group[-1] + 0.5)):
+                t1 = min(t + 1.2, group[-1] + 0.5)
+                lo, hi = int(np.searchsorted(ball_t, t)), int(np.searchsorted(ball_t, t1))
+                if hi - lo < 0.3 * fps * (t1 - t):
+                    # the ball was mostly not seen here (occluded or too small), so "no net
+                    # crossing" proves nothing: don't trim on the tracker's evidence
+                    break
+                if _crosses_net(s.ball, ball_t, t, t1):
                     return group[i:]
             # no net crossing seen (ball lost); fall through to the timing heuristic
 

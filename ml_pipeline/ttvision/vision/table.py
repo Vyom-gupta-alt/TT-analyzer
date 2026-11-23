@@ -86,7 +86,10 @@ class TableDetector:
 
         h, w = image.shape[:2]
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        best, best_area = None, self.min_area_frac * h * w
+        white = ((hsv[..., 2] > 170) & (hsv[..., 1] < 70)).astype(np.uint8)
+        white = cv2.dilate(white, np.ones((5, 5), np.uint8))
+        min_area = self.min_area_frac * h * w
+        best, best_score = None, 0.0
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
         for name in self.colors:
             lo, hi = _COLOR_RANGES[name]
@@ -97,12 +100,37 @@ class TableDetector:
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             for cnt in contours:
                 area = cv2.contourArea(cnt)
-                if area <= best_area:
+                if area <= min_area:
+                    continue
+                x, y, bw, bh = cv2.boundingRect(cnt)
+                # a table is seen whole; blue walls and barrier boards run off the frame
+                if x <= 2 or y <= 2 or x + bw >= w - 3 or y + bh >= h - 3:
                     continue
                 quad = self._fit_quad(cnt)
-                if quad is not None:
-                    best, best_area = self._refine_corners(order_corners(quad), cnt), area
+                if quad is None:
+                    continue
+                quad = self._refine_corners(order_corners(quad), cnt)
+                fill = area / max(cv2.contourArea(quad.astype(np.float32)), 1.0)
+                if fill < 0.8:
+                    continue
+                score = area * (0.25 + self._edge_whiteness(white, quad))
+                if score > best_score:
+                    best, best_score = quad, score
         return None if best is None else order_corners(best)
+
+    @staticmethod
+    def _edge_whiteness(white: np.ndarray, quad: np.ndarray) -> float:
+        """Share of points along the quad's border that sit on a white line."""
+        h, w = white.shape
+        hits = total = 0
+        for i in range(4):
+            a, b = quad[i], quad[(i + 1) % 4]
+            for u in np.linspace(0.1, 0.9, 25):
+                x, y = (a + (b - a) * u).astype(int)
+                if 0 <= x < w and 0 <= y < h:
+                    total += 1
+                    hits += int(white[y, x] > 0)
+        return hits / max(total, 1)
 
     @staticmethod
     def _fit_quad(contour: np.ndarray) -> np.ndarray | None:

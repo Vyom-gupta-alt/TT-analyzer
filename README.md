@@ -51,6 +51,21 @@ The compare page starts with four **synthetic** reference strokes. They're gener
 from a real player, and they're there so the page works on day one. To add real references, upload a video
 of a pro or coach, open one of their strokes, and click **Save this stroke as a reference**.
 
+## Sample match and preview
+
+`ml_pipeline/ttvision/sample_match.py` renders an animated sample match: a regulation table seen from a
+broadcast camera, two players and a ball timed to their swings, with hit and bounce sounds. It's for
+trying the app and testing the pipeline without real footage. The real rally detector finds all four
+of its rallies and starts each clip one second before the toss.
+
+`preview/` is a single-page preview of the dashboard that runs on that sample match. To build its data:
+
+```bash
+python preview/build_preview.py preview/build
+```
+
+Then serve `preview/index.html` next to the built `demo.json` and `match.mp4`.
+
 ## What's inside
 
 ```
